@@ -1,0 +1,29 @@
+body {
+  font-family: system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+  background: #111;
+  color: #eee;
+  text-align: center;
+}
+
+#app {
+  padding: 2rem;
+}
+
+button {
+  font-size: 1.1rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #4f8cff;
+  color: white;
+}
+
+button:hover {
+  background: #3a70e0;
+}
