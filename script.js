@@ -46,10 +46,20 @@ channel.onmessage = (event) => {
 announce();
 
 function updateStatus() {
-  const count = knownTabs.size;
-  document.getElementById("status").textContent = `${count} tab(s) detected.`;
+  const { rank, total } = getMyRank();
+  document.getElementById("status").textContent =
+    `${total} tab(s) detected. You are tab #${rank}.`;
 }
 
 window.addEventListener("beforeunload", () => {
   channel.postMessage({ type: "leave", id: myId });
 });
+
+function getMyRank() {
+  const sorted = [...knownTabs.entries()].sort(
+    (a, b) => a[1].joinTime - b[1].joinTime,
+  );
+  const myIndex = sorted.findIndex(([id]) => id === myId);
+  return { rank: myIndex + 1, total: sorted.length };
+}
+
