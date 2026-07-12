@@ -61,11 +61,18 @@ function updateCalibrationUI() {
   if (mySlot !== null) {
     document.getElementById("status").textContent =
       `You are note ${mySlot}. Waiting for other tabs (currently on slot ${currentSlot})...`;
+    startBtn.textContent = "Restart Calibration";
+    startBtn.onclick = startNewCalibration;
+  } else if (currentSlot === 1) {
+    document.getElementById("status").textContent =
+      "Calibration: Press Ctrl+1 (or Cmd+1 on Mac) now.";
+    startBtn.textContent = "Make this tab Note 1";
+    startBtn.onclick = () => claimSlot(1);
   } else {
     document.getElementById("status").textContent =
-      `Calibration: Press Ctrl+${currentSlot} (or Cmd+${currentSlot} on Mac) now.`;
-    startBtn.textContent = `Make this tab Note ${currentSlot}`;
-    startBtn.onclick = () => claimSlot(currentSlot);
+      `Calibration in progress (slot ${currentSlot})... this tab hasn't claimed a note.`;
+    startBtn.textContent = "Restart Calibration";
+    startBtn.onclick = startNewCalibration;
   }
 }
 
@@ -111,9 +118,6 @@ function finishCalibration() {
   calibrationActive = false;
   document.getElementById("status").textContent =
     `Calibration complete! You are note ${mySlot} of ${slotAssignments.size}.`;
-
-  startBtn.textContent = "Restart Calibration";
-  startBtn.onclick = startNewCalibration;
 }
 
 // buttons
@@ -183,6 +187,28 @@ const noteFrequencies = {
   8: 523.25, // C5
 };
 
+const noteNames = {
+  1: "C",
+  2: "D",
+  3: "E",
+  4: "F",
+  5: "G",
+  6: "A",
+  7: "B",
+  8: "C (high)",
+};
+
+const noteColors = {
+  1: "#3a2a2a",
+  2: "#3a3226",
+  3: "#38381f",
+  4: "#28331f",
+  5: "#1f3330",
+  6: "#1f2b38",
+  7: "#2a2138",
+  8: "#331f30",
+};
+
 let audioCtx = null;
 
 function ensureAudioContext() {
@@ -212,4 +238,31 @@ function playNote(slot) {
 
   osc.start();
   osc.stop(ctx.currentTime + 0.6);
+
+  flashNote(slot);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (calibrationActive || mySlot === null) return;
+  if (document.visibilityState !== "visible") return;
+
+  const pressedSlot = Number(event.key);
+  if (pressedSlot === mySlot) {
+    playNote(mySlot);
+  }
+});
+
+function flashNote(slot) {
+  const body = document.body;
+  const color = noteColors[slot] || "#222";
+
+  body.style.transition = "box-shadow 0.15s ease-out";
+  body.style.boxShadow = `inset 0 0 60px 20px ${color}`;
+
+  document.getElementById("status").textContent =
+    `♪ Note ${slot} — ${noteNames[slot]}`;
+
+  setTimeout(() => {
+    body.style.boxShadow = "none";
+  }, 250);
 }

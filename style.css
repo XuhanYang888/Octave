@@ -8,6 +8,7 @@ body {
   background: #111;
   color: #eee;
   text-align: center;
+  box-sizing: border-box;
 }
 
 #app {
