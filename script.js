@@ -9,6 +9,7 @@ const slotAssignments = new Map();
 
 knownTabs.set(myId, { joinTime: Date.now() });
 
+// tab presence (announce / ack / leave)
 function announce() {
   channel.postMessage({
     type: "announce",
@@ -36,9 +37,23 @@ window.addEventListener("beforeunload", () => {
   channel.postMessage({ type: "leave", id: myId });
 });
 
+// calibration
+function resetCalibrationState() {
+  mySlot = null;
+  slotAssignments.clear();
+}
+
+function startNewCalibration() {
+  channel.postMessage({ type: "calibration-reset" });
+  resetCalibrationState();
+  beginCalibration(1);
+  channel.postMessage({ type: "calibration-prompt", slot: 1 });
+}
+
 function beginCalibration(slot) {
   calibrationActive = true;
   currentSlot = slot;
+  openTabsBtn.style.display = "none";
   updateCalibrationUI();
 }
 
@@ -49,6 +64,8 @@ function updateCalibrationUI() {
   } else {
     document.getElementById("status").textContent =
       `Calibration: Press Ctrl+${currentSlot} (or Cmd+${currentSlot} on Mac) now.`;
+    startBtn.textContent = `Make this tab Note ${currentSlot}`;
+    startBtn.onclick = () => claimSlot(currentSlot);
   }
 }
 
@@ -90,19 +107,22 @@ function finishCalibration() {
   calibrationActive = false;
   document.getElementById("status").textContent =
     `Calibration complete! You are note ${mySlot} of ${slotAssignments.size}.`;
+
+  startBtn.textContent = "Restart Calibration";
+  startBtn.onclick = startNewCalibration;
 }
 
-document.getElementById("start-btn").addEventListener("click", () => {
-  mySlot = null;
-  slotAssignments.clear();
-  beginCalibration(1);
-  channel.postMessage({ type: "calibration-prompt", slot: 1 });
-});
+// buttons
+const startBtn = document.getElementById("start-btn");
+const openTabsBtn = document.getElementById("open-tabs-btn");
 
-document.getElementById("open-tabs-btn").addEventListener("click", () => {
+startBtn.onclick = startNewCalibration;
+
+openTabsBtn.addEventListener("click", () => {
   window.open(window.location.href, "_blank");
 });
 
+// messages router
 channel.onmessage = (event) => {
   const { type, id, joinTime, slot } = event.data;
 
@@ -125,6 +145,10 @@ channel.onmessage = (event) => {
     case "leave":
       knownTabs.delete(id);
       updateStatus();
+      break;
+
+    case "calibration-reset":
+      resetCalibrationState();
       break;
 
     case "calibration-prompt":
