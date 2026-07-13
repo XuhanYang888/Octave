@@ -22,7 +22,4 @@ Octave turns your browser's tab bars into a playable musical instrument. Open th
 
 ## Demo
 
-Basics (turn on sound to hear it):
-https://github.com/user-attachments/assets/2a059c64-1db7-4973-8991-b81686563e65
-
-
+[Video](https://drive.google.com/file/d/1TDtDk6aCuwJiJ3A9lx5S_gHR2ytY-KNL/view?usp=sharing) (turn on sound to hear it)
