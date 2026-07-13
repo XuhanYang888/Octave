@@ -15,12 +15,14 @@ Octave turns your browser's tab bars into a playable musical instrument. Open th
 
 ## Controls
 
-- Open this page in multiple tabs
+- Open this page in multiple tabs (8 recommended). **Make sure they are the first 8 tabs on your browser!!!**
 - Click `Start Calibration` to begin assigning notes
 - Use `Open Another Tab` to create an additional tab quickly
 - Switch tabs with Ctrl/Cmd+1 through 8, then return to your assigned tab to play its note
 
 ## Demo
 
-Basics:
-https://github.com/user-attachments/assets/85f59832-0927-4138-92f9-35f0af3042d8
+Basics (turn on sound to hear it):
+https://github.com/user-attachments/assets/2a059c64-1db7-4973-8991-b81686563e65
+
+
