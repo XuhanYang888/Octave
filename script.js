@@ -170,6 +170,10 @@ channel.onmessage = (event) => {
     case "calibration-complete":
       finishCalibration();
       break;
+
+    case "song-start":
+      beginSong(event.data.song, event.data.startTime);
+      break;
   }
 };
 
@@ -265,4 +269,66 @@ function flashNote(slot) {
   setTimeout(() => {
     body.style.boxShadow = "none";
   }, 250);
+}
+
+// songs
+
+const testSong = {
+  name: "Test",
+  tempo: 600,
+  notes: [
+    { noteIndex: 1, time: 0 },
+    { noteIndex: 2, time: 600 },
+    { noteIndex: 3, time: 1200 },
+    { noteIndex: 4, time: 1800 },
+    { noteIndex: 3, time: 2400 },
+    { noteIndex: 2, time: 3000 },
+    { noteIndex: 1, time: 3600 },
+  ],
+};
+
+let currentSong = null;
+let songStartTime = null;
+let songTimerId = null;
+
+const playSongBtn = document.getElementById("play-song-btn");
+
+playSongBtn.addEventListener("click", () => {
+  const startTime = Date.now() + 1000;
+  channel.postMessage({ type: "song-start", song: testSong, startTime });
+  beginSong(testSong, startTime);
+});
+
+function beginSong(song, startTime) {
+  currentSong = song;
+  songStartTime = startTime;
+
+  if (songTimerId) clearInterval(songTimerId);
+  songTimerId = setInterval(updateSongProgress, 50);
+
+  document.getElementById("status").textContent =
+    `Get ready: "${song.name}" starting...`;
+}
+
+function updateSongProgress() {
+  const elapsed = Date.now() - songStartTime;
+
+  if (elapsed < 0) {
+    document.getElementById("status").textContent =
+      `Starting in ${Math.ceil(-elapsed / 1000)}...`;
+    return;
+  }
+
+  const totalDuration = currentSong.notes[currentSong.notes.length - 1].time;
+
+  if (elapsed > totalDuration + 1000) {
+    clearInterval(songTimerId);
+    songTimerId = null;
+    document.getElementById("status").textContent =
+      `"${currentSong.name}" finished.`;
+    return;
+  }
+
+  document.getElementById("status").textContent =
+    `Playing "${currentSong.name}" — ${elapsed}ms elapsed`;
 }
