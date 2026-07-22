@@ -41,6 +41,7 @@ window.addEventListener("beforeunload", () => {
 function resetCalibrationState() {
   mySlot = null;
   slotAssignments.clear();
+  playSongBtn.disabled = true;
 }
 
 function startNewCalibration() {
@@ -118,6 +119,7 @@ function finishCalibration() {
   calibrationActive = false;
   document.getElementById("status").textContent =
     `Calibration complete! You are note ${mySlot} of ${slotAssignments.size}.`;
+  playSongBtn.disabled = false;
 }
 
 // buttons
@@ -283,17 +285,26 @@ const testSong = {
     { noteIndex: 4, time: 1800 },
     { noteIndex: 3, time: 2400 },
     { noteIndex: 2, time: 3000 },
-    { noteIndex: 1, time: 3600 },
+    { noteIndex: 2, time: 3600 },
+    { noteIndex: 2, time: 4200 },
+    { noteIndex: 1, time: 4800 },
   ],
 };
 
 let currentSong = null;
 let songStartTime = null;
 let songTimerId = null;
+let nextCueIndex = 0;
+let myUpcomingNotes = [];
+let lastCueState = null;
+
+const HIT_WINDOW = 250;
 
 const playSongBtn = document.getElementById("play-song-btn");
 
 playSongBtn.addEventListener("click", () => {
+  if (calibrationActive || mySlot === null) return;
+
   const startTime = Date.now() + 1000;
   channel.postMessage({ type: "song-start", song: testSong, startTime });
   beginSong(testSong, startTime);
@@ -302,6 +313,12 @@ playSongBtn.addEventListener("click", () => {
 function beginSong(song, startTime) {
   currentSong = song;
   songStartTime = startTime;
+  nextCueIndex = 0;
+  lastCueState = null;
+
+  myUpcomingNotes = mySlot
+    ? song.notes.filter((n) => n.noteIndex === mySlot)
+    : [];
 
   if (songTimerId) clearInterval(songTimerId);
   songTimerId = setInterval(updateSongProgress, 50);
@@ -326,9 +343,83 @@ function updateSongProgress() {
     songTimerId = null;
     document.getElementById("status").textContent =
       `"${currentSong.name}" finished.`;
+    clearCueUI();
     return;
   }
 
+  checkForCue(elapsed);
+}
+
+function checkForCue(elapsed) {
+  const upcoming = myUpcomingNotes[nextCueIndex];
+
+  if (!upcoming) {
+    setCueState("waiting", elapsed);
+    return;
+  }
+
+  const timeUntilNote = upcoming.time - elapsed;
+
+  if (timeUntilNote > -HIT_WINDOW) {
+    setCueState(
+      timeUntilNote > 0 ? "waiting" : "now",
+      timeUntilNote > 0 ? elapsed : timeUntilNote,
+    );
+  } else {
+    nextCueIndex++;
+    lastCueState = null;
+  }
+}
+
+function setCueState(state, value) {
+  if (state === lastCueState) {
+    if (state === "waiting") updateWaitingText(value);
+    return;
+  }
+
+  lastCueState = state;
+
+  if (state === "waiting") {
+    updateWaitingText(value);
+    document.title = "Octave";
+    resetFavicon();
+  } else if (state === "now") {
+    document.getElementById("status").textContent = "NOW!";
+    // document.title = "🔴 NOW!";
+    setFavicon("🔴");
+  }
+}
+
+function updateWaitingText(elapsed) {
   document.getElementById("status").textContent =
     `Playing "${currentSong.name}" — ${elapsed}ms elapsed`;
 }
+
+function clearCueUI() {
+  lastCueState = null;
+  document.title = "Octave";
+  resetFavicon();
+}
+
+function setFavicon(emoji) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  ctx.font = "48px serif";
+  ctx.fillText(emoji, 8, 48);
+
+  let link = document.querySelector("link[rel~='icon']");
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  link.href = canvas.toDataURL();
+}
+
+function resetFavicon() {
+  setFavicon("⚪️");
+}
+
+resetFavicon();

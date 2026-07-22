@@ -28,3 +28,7 @@ button {
 button:hover {
   background: #3a70e0;
 }
+
+button:disabled {
+  background-color: #40495a;
+}
