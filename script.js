@@ -87,6 +87,7 @@ document.addEventListener("visibilitychange", () => {
 
   if (!calibrationActive && mySlot !== null) {
     playNote(mySlot);
+    registerAction();
   }
 });
 
@@ -176,6 +177,11 @@ channel.onmessage = (event) => {
     case "song-start":
       beginSong(event.data.song, event.data.startTime);
       break;
+
+    case "score-update":
+      allScores.set(id, event.data.score);
+      updateScoreUI();
+      break;
   }
 };
 
@@ -255,6 +261,7 @@ document.addEventListener("keydown", (event) => {
   const pressedSlot = Number(event.key);
   if (pressedSlot === mySlot) {
     playNote(mySlot);
+    registerAction();
   }
 });
 
@@ -297,8 +304,9 @@ let songTimerId = null;
 let nextCueIndex = 0;
 let myUpcomingNotes = [];
 let lastCueState = null;
+let myScore = { hits: 0, misses: 0 };
 
-const HIT_WINDOW = 250;
+const HIT_WINDOW = 500;
 
 const playSongBtn = document.getElementById("play-song-btn");
 
@@ -315,6 +323,10 @@ function beginSong(song, startTime) {
   songStartTime = startTime;
   nextCueIndex = 0;
   lastCueState = null;
+  myScore = { hits: 0, misses: 0 };
+  allScores.clear();
+  playSongBtn.disabled = true;
+  updateScoreUI();
 
   myUpcomingNotes = mySlot
     ? song.notes.filter((n) => n.noteIndex === mySlot)
@@ -341,13 +353,30 @@ function updateSongProgress() {
   if (elapsed > totalDuration + 1000) {
     clearInterval(songTimerId);
     songTimerId = null;
-    document.getElementById("status").textContent =
-      `"${currentSong.name}" finished.`;
-    clearCueUI();
+    finishSong();
     return;
   }
 
   checkForCue(elapsed);
+}
+
+function finishSong() {
+  clearCueUI();
+
+  const totalHits = [...allScores.values()].reduce((sum, s) => sum + s.hits, 0);
+  const totalMisses = [...allScores.values()].reduce(
+    (sum, s) => sum + s.misses,
+    0,
+  );
+  const totalNotes = totalHits + totalMisses;
+  const accuracy =
+    totalNotes > 0 ? Math.round((totalHits / totalNotes) * 100) : 0;
+
+  document.getElementById("status").textContent =
+    `"${currentSong.name}" finished! ${totalHits}/${totalNotes} hit (${accuracy}%).`;
+
+  playSongBtn.disabled = false;
+  playSongBtn.textContent = "Play Again";
 }
 
 function checkForCue(elapsed) {
@@ -366,6 +395,9 @@ function checkForCue(elapsed) {
       timeUntilNote > 0 ? elapsed : timeUntilNote,
     );
   } else {
+    myScore.misses++;
+    channel.postMessage({ type: "score-update", id: myId, score: myScore });
+    updateScoreUI();
     nextCueIndex++;
     lastCueState = null;
   }
@@ -420,6 +452,39 @@ function setFavicon(emoji) {
 
 function resetFavicon() {
   setFavicon("⚪️");
+}
+
+function registerAction() {
+  if (!currentSong || lastCueState !== "now") return;
+
+  myScore.hits++;
+  nextCueIndex++;
+  lastCueState = null;
+
+  channel.postMessage({ type: "score-update", id: myId, score: myScore });
+  updateScoreUI();
+
+  document.getElementById("status").textContent = "Hit!";
+  setFavicon("🟢");
+  document.title = "Hit!";
+
+  setTimeout(() => {
+    resetFavicon();
+    document.title = "Octave";
+  }, 400);
+}
+
+const allScores = new Map();
+
+function updateScoreUI() {
+  allScores.set(myId, myScore);
+  const totalHits = [...allScores.values()].reduce((sum, s) => sum + s.hits, 0);
+  const totalMisses = [...allScores.values()].reduce(
+    (sum, s) => sum + s.misses,
+    0,
+  );
+  document.getElementById("score").textContent =
+    `Hits: ${totalHits} — Misses: ${totalMisses}`;
 }
 
 resetFavicon();
